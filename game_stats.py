@@ -9,11 +9,13 @@ API_ERRORS = (aiohttp.ClientError, asyncio.TimeoutError)
 class GameStatsClient:
     """Small async wrapper around Game Stats API (github.com/Charlie2M/game-stats-api)."""
 
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, api_key: str | None):
         self.base_url = base_url.rstrip("/")
+        # The API refuses writes without this key. Reads are public, so the bot still works read-only without it.
+        headers = {"X-API-Key": api_key} if api_key else {}
         # aiohttp instead of requests: requests would block the event loop and freeze the whole bot
         # while waiting for a response. discord.py already depends on aiohttp.
-        self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5))
+        self.session = aiohttp.ClientSession(headers=headers, timeout=aiohttp.ClientTimeout(total=5))
 
     async def close(self):
         await self.session.close()
@@ -31,9 +33,12 @@ class GameStatsClient:
             response.raise_for_status()
             return await response.json()
 
-    async def set_profile(self, player_id: int, game: str, rank: str, region: str) -> dict:
+    async def set_profile(self, player_id: int, discord_id: int, game: str, rank: str, region: str) -> dict:
         payload = {"rank": rank, "region": region}
-        async with self.session.put(f"{self.base_url}/players/{player_id}/profiles/{game}", json=payload) as response:
+        # The API checks this matches the player's linked Discord account, so users can only edit their own profile.
+        headers = {"X-Discord-User-Id": str(discord_id)}
+        url = f"{self.base_url}/players/{player_id}/profiles/{game}"
+        async with self.session.put(url, json=payload, headers=headers) as response:
             response.raise_for_status()
             return await response.json()
 

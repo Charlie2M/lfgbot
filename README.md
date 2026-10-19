@@ -41,6 +41,8 @@ A Discord bot that helps small gaming communities find people to play with. Buil
 
 5. Start [Game Stats API](https://github.com/Charlie2M/game-stats-api) (see its README). The bot expects it at `http://127.0.0.1:8000`; change `GAME_STATS_API_URL` in `.env` if it runs somewhere else. Without it, `/ping` and `/lfg` still work, but `/profile` fails and Valorant posts show no rank info.
 
+   The API only accepts writes from the bot when they carry its shared key. Set `GAME_STATS_API_KEY` in the bot's `.env` to the same value as `BOT_API_KEY` on the API server. Without it, `/lfg` still shows ranks, but `/profile` can't save.
+
 6. Run the bot:
 
    ```bash

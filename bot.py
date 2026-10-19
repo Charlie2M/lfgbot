@@ -11,9 +11,13 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 # Optional: set this to a server ID while developing so commands sync there instantly.
 DEV_GUILD_ID = os.getenv("DEV_GUILD_ID")
 GAME_STATS_API_URL = os.getenv("GAME_STATS_API_URL", "http://127.0.0.1:8000")
+# Must match BOT_API_KEY on the Game Stats API server. Without it the API refuses writes, so /profile can't save.
+GAME_STATS_API_KEY = os.getenv("GAME_STATS_API_KEY")
 
 if not TOKEN:
     raise SystemExit("DISCORD_TOKEN is not set. Copy .env.example to .env and add your bot token.")
+if not GAME_STATS_API_KEY:
+    print("Warning: GAME_STATS_API_KEY is not set, so /profile won't be able to save profiles.")
 
 VALORANT = "Valorant"
 # Lowest to highest, so a rank's position in the list is its skill level.
@@ -33,7 +37,7 @@ class LFGBot(commands.Bot):
 
     async def setup_hook(self):
         # setup_hook runs once before connecting, unlike on_ready which can fire again on reconnects.
-        self.stats = GameStatsClient(GAME_STATS_API_URL)
+        self.stats = GameStatsClient(GAME_STATS_API_URL, GAME_STATS_API_KEY)
 
         if DEV_GUILD_ID:
             guild = discord.Object(id=int(DEV_GUILD_ID))
@@ -75,7 +79,7 @@ async def profile(interaction: discord.Interaction, rank: app_commands.Choice[st
         player = await bot.stats.get_player_by_discord(interaction.user.id)
         if player is None:
             player = await bot.stats.create_player(interaction.user.name, interaction.user.id)
-        await bot.stats.set_profile(player["id"], VALORANT, rank.value, region.value)
+        await bot.stats.set_profile(player["id"], interaction.user.id, VALORANT, rank.value, region.value)
     except API_ERRORS as error:
         print(f"Game Stats API error in /profile: {error!r}")
         await interaction.followup.send("I couldn't save your profile right now. Try again later.", ephemeral=True)
